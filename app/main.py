@@ -1,4 +1,5 @@
 """Receipts backend: evidence and manipulation checks for video transcripts."""
+import asyncio
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -7,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from .analysis import TranscriptIndex, detect_manipulation, extract_claims
 from .config import get_settings
 from .limits import limiter
 from .llm import HTTP_STATUS, LLMError, chat_json
@@ -15,7 +17,7 @@ from .schemas import AnalyzeIn, CheckIn, ClaimsIn, SummarizeIn, SummaryOut
 load_dotenv()
 
 STATIC = Path(__file__).parent / "static"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 app = FastAPI(title="Receipts", version=VERSION, docs_url="/docs", redoc_url=None)
 
@@ -75,16 +77,33 @@ SUMMARY_LENGTH = {
 }
 
 
+async def _summary(transcript: str, length: str) -> dict:
+    user = f"{SUMMARY_LENGTH[length]}\n\n<transcript>\n{transcript}\n</transcript>"
+    out = await chat_json(SUMMARY_SYSTEM, user, SummaryOut, max_tokens=900 if length == "short" else 1800)
+    return {"status": "ok", "length": length, **out.model_dump()}
+
+
+async def _part(coro) -> dict:
+    """Run one part of an analysis; a failure becomes an explicit error for that part only."""
+    try:
+        return await coro
+    except LLMError as exc:
+        return {"status": "error", "error": exc.kind, "message": exc.message}
+
+
 @app.post("/summarize")
 async def summarize(body: SummarizeIn):
-    user = f"{SUMMARY_LENGTH[body.length]}\n\n<transcript>\n{body.transcript}\n</transcript>"
-    out = await chat_json(SUMMARY_SYSTEM, user, SummaryOut, max_tokens=900 if body.length == "short" else 1800)
-    return {"status": "ok", "length": body.length, **out.model_dump()}
+    return await _summary(body.transcript, body.length)
 
 
 @app.post("/claims")
 async def claims(body: ClaimsIn):
-    return _not_built("stage 2: claim extraction")
+    return await extract_claims(body.transcript)
+
+
+@app.post("/manipulation")
+async def manipulation(body: ClaimsIn):
+    return await detect_manipulation(body.transcript)
 
 
 @app.post("/check")
@@ -94,7 +113,20 @@ async def check(body: CheckIn):
 
 @app.post("/analyze")
 async def analyze(body: AnalyzeIn):
-    return _not_built("stage 2-3: full analysis")
+    index = TranscriptIndex(body.transcript)
+    summary, claims_part, manipulation_part = await asyncio.gather(
+        _part(_summary(body.transcript, body.summary_length)),
+        _part(extract_claims(body.transcript, index)),
+        _part(detect_manipulation(body.transcript, index)),
+    )
+    return {
+        "status": "ok",
+        "summary": summary,
+        "claims": claims_part,
+        "manipulation": manipulation_part,
+        # Evidence checks arrive in stage 3; until then no claim carries a verdict.
+        "evidence": {"status": "error", "error": "not_implemented", "message": "Evidence checking is not built yet. No verdicts were produced."},
+    }
 
 
 @app.get("/", include_in_schema=False)

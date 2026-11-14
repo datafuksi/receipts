@@ -105,12 +105,8 @@ def test_short_transcript_rejected():
     assert client.post("/summarize", json={"transcript": "too short"}).status_code == 422
 
 
-@pytest.mark.parametrize(
-    "path,body",
-    [("/claims", {"transcript": TRANSCRIPT}), ("/check", {"claim": "Coffee reduces diabetes risk."}), ("/analyze", {"transcript": TRANSCRIPT})],
-)
-def test_unbuilt_endpoints_say_so(path, body):
-    r = client.post(path, json=body)
+def test_unbuilt_endpoint_says_so():
+    r = client.post("/check", json={"claim": "Coffee reduces diabetes risk."})
     assert r.status_code == 501
     assert r.json()["error"] == "not_implemented"
 

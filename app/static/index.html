@@ -53,6 +53,21 @@
   .err h2 { color: var(--accent); }
   .pending { border-left: 4px solid var(--warn); }
   .pending h2 { color: var(--warn); }
+
+  .tally { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--ink); background: var(--card); margin-bottom: 14px; }
+  .tally div { padding: 10px 12px; border-right: 1px dashed var(--line); }
+  .tally div:last-child { border-right: 0; }
+  .tally b { display: block; font: 700 26px/1.1 var(--mono); }
+  .tally span { font: 11px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  @media (max-width: 560px) { .tally { grid-template-columns: repeat(2, 1fr); } .tally div:nth-child(2) { border-right: 0; } .tally div:nth-child(-n+2) { border-bottom: 1px dashed var(--line); } }
+  .item { display: grid; grid-template-columns: 52px 1fr; gap: 4px 12px; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+  .item:last-child { border-bottom: 0; padding-bottom: 0; }
+  .item .ts { font: 12px var(--mono); color: var(--muted); padding-top: 3px; }
+  .item .body > p { margin: 0 0 6px; }
+  .item blockquote { margin: 0 0 6px; padding-left: 10px; border-left: 3px solid var(--line); font-style: italic; color: var(--muted); }
+  .chip { display: inline-block; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border: 1px solid currentColor; margin-right: 6px; }
+  .chip.wait { color: var(--muted); } .chip.abstain { color: var(--warn); } .chip.tech { color: var(--accent); } .chip.kind { color: var(--muted); border-style: dashed; }
+  .note { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
   footer { margin-top: 36px; font: 12px var(--mono); color: var(--muted); }
   [hidden] { display: none !important; }
 </style>
@@ -139,27 +154,91 @@ function showFailure(title, res) {
   para(el, "No result was produced. Nothing here is a default or a guess.").style.color = "var(--muted)";
 }
 
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function partFailed(title, part) {
+  const pending = part.error === "not_implemented";
+  const s = slip(title + (pending ? " — not built yet" : " — failed"), pending ? "pending" : "err");
+  para(s, part.message || "Unknown error.");
+  if (!pending) para(s, "No result was produced. Nothing here is a default or a guess.").style.color = "var(--muted)";
+}
+function tally(d) {
+  const t = el("div", "tally");
+  const cell = (n, label) => { const c = el("div"); c.append(el("b", null, n), el("span", null, label)); t.appendChild(c); };
+  const c = d.claims.status === "ok" ? d.claims.counts : null;
+  const m = d.manipulation.status === "ok" ? d.manipulation.counts : null;
+  cell(c ? c.total : "–", "claims found");
+  cell(c ? c.checkable : "–", "checkable");
+  cell(c ? c.not_checkable : "–", "not checkable");
+  cell(m ? m.total : "–", "rhetoric flags");
+  out.appendChild(t);
+}
+function renderSummary(sum, length) {
+  if (sum.status !== "ok") return partFailed("Summary", sum);
+  const s = slip("Summary (" + (length === "short" ? "shorter" : "longer") + ")");
+  sum.summary.split(/\n{2,}/).forEach((t) => para(s, t));
+  if (sum.key_points && sum.key_points.length) {
+    const ul = el("ul");
+    sum.key_points.forEach((k) => ul.appendChild(el("li", null, k)));
+    s.appendChild(ul);
+  }
+}
+function renderClaims(part) {
+  if (part.status !== "ok") return partFailed("Claims", part);
+  const s = slip("Claims in this video");
+  if (!part.claims.length) { para(s, "No factual claims found. This looks like opinion, story or commentary."); return; }
+  if (!part.has_timestamps) s.appendChild(el("p", "note", "No timestamps in this transcript, so none are shown."));
+  part.claims.forEach((c) => {
+    const row = el("div", "item");
+    row.appendChild(el("div", "ts", c.timestamp || "—"));
+    const b = el("div", "body");
+    b.appendChild(el("p", null, c.text));
+    if (c.quote) b.appendChild(el("blockquote", null, "“" + c.quote + "”"));
+    else b.appendChild(el("p", "note", "The exact wording could not be matched in the transcript, so no quote is shown."));
+    if (c.checkable) b.appendChild(el("span", "chip wait", "Checkable · evidence pending"));
+    else b.appendChild(el("span", "chip abstain", "Not checkable · " + c.why_not_checkable));
+    b.appendChild(el("span", "chip kind", c.kind === "scientific" ? "research sources" : "news sources"));
+    row.appendChild(b);
+    s.appendChild(row);
+  });
+}
+function renderManipulation(part) {
+  if (part.status !== "ok") return partFailed("Manipulation lens", part);
+  const s = slip("Manipulation lens");
+  s.appendChild(el("p", "note", "How the wording works on a listener. A technique does not make a statement false; this lens is separate from the evidence check."));
+  if (!part.flags.length) { para(s, "No clear persuasion techniques found among the " + part.techniques_checked.length + " we look for."); return; }
+  part.flags.forEach((f) => {
+    const row = el("div", "item");
+    row.appendChild(el("div", "ts", f.timestamp || "—"));
+    const b = el("div", "body");
+    b.appendChild(el("span", "chip tech", f.label));
+    b.appendChild(el("blockquote", null, "“" + f.quote + "”"));
+    b.appendChild(el("p", null, f.explanation));
+    row.appendChild(b);
+    s.appendChild(row);
+  });
+  if (part.counts.dropped_unverified) s.appendChild(el("p", "note", part.counts.dropped_unverified + " flag(s) were discarded because their quote was not found in the transcript."));
+}
+
 async function analyze() {
   const transcript = $("transcript").value.trim();
   out.replaceChildren();
   if (transcript.length < 40) { para(slip("Transcript needed", "err"), "Paste at least a few sentences of transcript."); return; }
   const length = document.querySelector("input[name=len]:checked").value;
   $("go-t").disabled = true; $("go-t").textContent = "Working…";
-  const [sum, full] = await Promise.all([
-    post("/summarize", { transcript, length }),
-    post("/analyze", { transcript, summary_length: length }),
-  ]);
-  if (sum.ok) {
-    const el = slip("Summary (" + (length === "short" ? "shorter" : "longer") + ")");
-    sum.data.summary.split(/\n{2,}/).forEach((t) => para(el, t));
-    if (sum.data.key_points && sum.data.key_points.length) {
-      const ul = document.createElement("ul");
-      sum.data.key_points.forEach((k) => { const li = document.createElement("li"); li.textContent = k; ul.appendChild(li); });
-      el.appendChild(ul);
-    }
-  } else showFailure("Summary", sum);
-  if (!full.ok) showFailure("Claims, evidence and manipulation lens", full);
+  const res = await post("/analyze", { transcript, summary_length: length });
   $("go-t").disabled = false; $("go-t").textContent = "Analyze";
+  if (!res.ok) return showFailure("Analysis", res);
+  const d = res.data;
+  tally(d);
+  renderSummary(d.summary, length);
+  renderClaims(d.claims);
+  if (d.evidence.status !== "ok") partFailed("Evidence check", d.evidence);
+  renderManipulation(d.manipulation);
 }
 
 async function checkClaim() {
