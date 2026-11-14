@@ -109,3 +109,20 @@ def test_prewarm_fills_the_cache_for_upcoming_videos(monkeypatch, tmp_path):
 def test_prewarm_endpoint_limits_to_three():
     r = client.post("/prewarm", json={"urls": ["a" * 11] * 4})
     assert r.status_code == 422
+
+
+def test_server_stops_asking_youtube_after_a_block(monkeypatch):
+    from app import transcripts as tr
+
+    calls = []
+
+    def blocked(vid):
+        calls.append(vid)
+        raise tr.TranscriptError("blocked", "refused")
+
+    monkeypatch.setattr(tr, "_fetch_sync", blocked)
+    monkeypatch.setattr(tr, "_blocked_until", 0.0)
+    for _ in range(3):
+        r = client.post("/transcript", json={"url": "https://youtu.be/abcdefghijk"})
+        assert r.status_code == 502 and r.json()["error"] == "blocked"
+    assert len(calls) == 1  # the second and third requests never reached YouTube

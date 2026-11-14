@@ -6,6 +6,7 @@ which reads captions in the user's own browser.
 """
 import asyncio
 import re
+import time
 
 _ID = re.compile(r"(?:v=|/shorts/|youtu\.be/|/embed/|/live/)([A-Za-z0-9_-]{11})")
 _BARE = re.compile(r"^[A-Za-z0-9_-]{11}$")
@@ -79,8 +80,23 @@ def _fetch_sync(vid: str) -> dict:
     return {"video_id": vid, "language": fetched.language_code, "auto_generated": fetched.is_generated, "transcript": text}
 
 
+BLOCK_PAUSE_SECONDS = 600
+_blocked_until = 0.0
+
+
 async def fetch_transcript(url: str) -> dict:
+    """Fetch captions for a link. After YouTube refuses our server once, stop asking for ten
+    minutes: repeated requests while blocked only prolong the block."""
+    global _blocked_until
     vid = video_id(url)
     if not vid:
         raise TranscriptError("invalid_url", "That does not look like a YouTube video link.")
-    return await asyncio.to_thread(_fetch_sync, vid)
+    if time.monotonic() < _blocked_until:
+        raise TranscriptError("blocked", "YouTube is currently refusing caption requests from our server. Paste the transcript instead.")
+    try:
+        return await asyncio.to_thread(_fetch_sync, vid)
+    except TranscriptError as exc:
+        if exc.kind == "blocked":
+            _blocked_until = time.monotonic() + BLOCK_PAUSE_SECONDS
+            raise TranscriptError("blocked", "YouTube is currently refusing caption requests from our server. Paste the transcript instead.")
+        raise
