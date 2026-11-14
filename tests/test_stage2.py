@@ -96,7 +96,6 @@ def test_analyze_parts_fail_independently(monkeypatch):
     d = r.json()
     for part in ("summary", "claims", "manipulation"):
         assert d[part]["status"] == "error" and d[part]["error"] == "analysis_failed"
-    assert d["evidence"]["error"] == "not_implemented"
 
 
 def test_wilson_known_values():

@@ -105,16 +105,10 @@ def test_short_transcript_rejected():
     assert client.post("/summarize", json={"transcript": "too short"}).status_code == 422
 
 
-def test_unbuilt_endpoint_says_so():
-    r = client.post("/check", json={"claim": "Coffee reduces diabetes risk."})
-    assert r.status_code == 501
-    assert r.json()["error"] == "not_implemented"
-
-
 def test_rate_limit(monkeypatch):
     monkeypatch.setenv("RATE_PER_MIN", "3")
     codes = [client.post("/check", json={"claim": "Coffee reduces diabetes risk."}).status_code for _ in range(4)]
-    assert codes == [501, 501, 501, 429]
+    assert codes == [503, 503, 503, 429]  # 503: no AI key in tests
 
 
 def test_daily_cap(monkeypatch):

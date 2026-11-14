@@ -33,6 +33,15 @@ class AnalyzeIn(TranscriptIn):
 
 class CheckIn(BaseModel):
     claim: str = Field(min_length=8, max_length=MAX_CLAIM)
+    # Optional hints from claim extraction; without them the claim is triaged first.
+    kind: Literal["scientific", "news"] | None = None
+    search_queries: list[str] = Field(default_factory=list, max_length=3)
+    key_terms: list[str] = Field(default_factory=list, max_length=8)
+    fresh: bool = False  # skip the cache
+
+
+class TranscriptUrlIn(BaseModel):
+    url: str = Field(min_length=11, max_length=300)
 
 
 class SummaryOut(BaseModel):

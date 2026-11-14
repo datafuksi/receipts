@@ -8,16 +8,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .analysis import TranscriptIndex, detect_manipulation, extract_claims
+from .analysis import TranscriptIndex, Triage, detect_manipulation, extract_claims
 from .config import get_settings
+from .evidence import EvidenceError, check_claim
 from .limits import limiter
 from .llm import HTTP_STATUS, LLMError, chat_json
-from .schemas import AnalyzeIn, CheckIn, ClaimsIn, SummarizeIn, SummaryOut
+from .schemas import AnalyzeIn, CheckIn, ClaimsIn, SummarizeIn, SummaryOut, TranscriptUrlIn
+from .transcripts import TranscriptError, fetch_transcript
 
 load_dotenv()
 
 STATIC = Path(__file__).parent / "static"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 app = FastAPI(title="Receipts", version=VERSION, docs_url="/docs", redoc_url=None)
 
@@ -47,6 +49,17 @@ async def rate_limit(request: Request, call_next):
 @app.exception_handler(LLMError)
 async def llm_error_handler(_: Request, exc: LLMError):
     return _error(HTTP_STATUS.get(exc.kind, 502), exc.kind, exc.message)
+
+
+@app.exception_handler(EvidenceError)
+async def evidence_error_handler(_: Request, exc: EvidenceError):
+    return _error(503 if exc.kind != "offline_miss" else 404, exc.kind, exc.message)
+
+
+@app.exception_handler(TranscriptError)
+async def transcript_error_handler(_: Request, exc: TranscriptError):
+    status = {"invalid_url": 422, "no_transcript": 404, "no_video": 404}.get(exc.kind, 502)
+    return _error(status, exc.kind, exc.message)
 
 
 def _not_built(stage: str) -> JSONResponse:
@@ -108,7 +121,15 @@ async def manipulation(body: ClaimsIn):
 
 @app.post("/check")
 async def check(body: CheckIn):
-    return _not_built("stage 3: evidence check")
+    triage = None
+    if body.kind and body.search_queries:
+        triage = Triage(checkable=True, kind=body.kind, search_queries=body.search_queries, key_terms=body.key_terms)
+    return await check_claim(body.claim, triage=triage, use_cache=not body.fresh)
+
+
+@app.post("/transcript")
+async def transcript(body: TranscriptUrlIn):
+    return {"status": "ok", **(await fetch_transcript(body.url))}
 
 
 @app.post("/analyze")
@@ -124,8 +145,7 @@ async def analyze(body: AnalyzeIn):
         "summary": summary,
         "claims": claims_part,
         "manipulation": manipulation_part,
-        # Evidence checks arrive in stage 3; until then no claim carries a verdict.
-        "evidence": {"status": "error", "error": "not_implemented", "message": "Evidence checking is not built yet. No verdicts were produced."},
+        # Evidence is checked per claim through /check, so results can appear as they arrive.
     }
 
 
