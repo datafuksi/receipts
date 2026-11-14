@@ -6,153 +6,166 @@
 <title>Receipts — check what a video claims</title>
 <style>
   :root {
-    --paper: #f6f1e7; --ink: #1c1a17; --muted: #6b655b; --line: #cfc6b4;
-    --card: #fffdf8; --accent: #b3261e; --ok: #1f6f43; --warn: #8a5a00;
+    --paper: #f6f1e7; --ink: #1c1a17; --muted: #6b655b; --line: #cfc6b4; --card: #fffdf8;
+    --accent: #b3261e; --ok: #1f6f43; --warn: #8a5a00; --none: #4a5a6a;
     --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
     --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --paper: #16150f; --ink: #efe9dc; --muted: #a39c8d; --line: #3a372e;
-            --card: #1e1c15; --accent: #ff8a7a; --ok: #7fd4a3; --warn: #e6b34d; }
+    :root { --paper: #16150f; --ink: #efe9dc; --muted: #a39c8d; --line: #3a372e; --card: #1e1c15;
+            --accent: #ff8a7a; --ok: #7fd4a3; --warn: #e6b34d; --none: #9db2c7; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--serif); }
   main { max-width: 760px; margin: 0 auto; padding: 28px 16px 64px; }
+  body.embed main { padding: 12px 12px 40px; }
   header { border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 22px; }
+  body.embed header { padding-bottom: 8px; margin-bottom: 12px; }
   h1 { font: 700 34px/1 var(--mono); letter-spacing: -1px; margin: 0 0 8px; }
+  body.embed h1 { font-size: 22px; margin: 0; }
   h1 span { color: var(--accent); }
   .tag { margin: 0; color: var(--muted); }
   .status { font: 12px var(--mono); color: var(--muted); margin-top: 10px; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
   .dot.ok { background: var(--ok); } .dot.bad { background: var(--accent); } .dot.warn { background: var(--warn); }
-  .tabs { display: flex; gap: 0; margin-bottom: -1px; }
+  .tabs { display: flex; margin-bottom: -1px; }
   .tabs button { font: 600 13px var(--mono); padding: 10px 14px; background: transparent; color: var(--muted);
     border: 1px solid transparent; border-bottom: 0; cursor: pointer; }
   .tabs button[aria-selected="true"] { background: var(--card); color: var(--ink); border-color: var(--line); }
   .panel { background: var(--card); border: 1px solid var(--line); padding: 16px; }
-  label { display: block; font: 600 12px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
-  textarea, input[type=text] { width: 100%; font: 15px/1.5 var(--serif); color: var(--ink); background: var(--paper);
+  label.f { display: block; font: 600 12px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+  textarea, input[type=text], input[type=url] { width: 100%; font: 15px/1.5 var(--serif); color: var(--ink); background: var(--paper);
     border: 1px solid var(--line); padding: 10px; border-radius: 0; }
-  textarea { min-height: 180px; resize: vertical; }
-  textarea:focus, input:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  textarea { min-height: 170px; resize: vertical; }
+  textarea:focus, input:focus, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
   .seg { display: inline-flex; border: 1px solid var(--ink); }
-  .seg label { margin: 0; padding: 7px 12px; cursor: pointer; text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .seg label { margin: 0; padding: 7px 12px; cursor: pointer; font: 600 12px var(--mono); }
   .seg input { position: absolute; opacity: 0; }
   .seg input:checked + span { text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--accent); }
   .go { font: 700 14px var(--mono); padding: 10px 18px; background: var(--ink); color: var(--paper); border: 0; cursor: pointer; margin-left: auto; }
   .go:disabled { opacity: .5; cursor: wait; }
-  .count { font: 12px var(--mono); color: var(--muted); }
+  .ghost { font: 600 12px var(--mono); padding: 6px 10px; background: transparent; color: var(--ink); border: 1px solid var(--ink); cursor: pointer; }
+  .count, .note { font: 12px var(--mono); color: var(--muted); }
+  .note { font: 13px/1.5 var(--serif); margin: 0 0 6px; }
   .privacy { font-size: 13px; color: var(--muted); margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 10px; }
   #out { margin-top: 22px; }
+  body.embed #out { margin-top: 0; }
   .slip { background: var(--card); border: 1px solid var(--line); padding: 16px; margin-bottom: 14px; }
-  .slip h2 { font: 700 13px var(--mono); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 10px;
+  .slip > h2 { font: 700 13px var(--mono); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 10px;
     padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
-  .slip ul { margin: 10px 0 0; padding-left: 20px; }
-  .err { border-left: 4px solid var(--accent); }
-  .err h2 { color: var(--accent); }
-  .pending { border-left: 4px solid var(--warn); }
-  .pending h2 { color: var(--warn); }
+  .slip ul { margin: 8px 0 0; padding-left: 20px; }
+  .slip p { margin: 0 0 8px; }
+  .err { border-left: 4px solid var(--accent); } .err > h2 { color: var(--accent); }
+  .video { font: 600 14px var(--mono); margin: 0 0 12px; overflow-wrap: anywhere; }
 
-  .tally { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--ink); background: var(--card); margin-bottom: 14px; }
-  .tally div { padding: 10px 12px; border-right: 1px dashed var(--line); }
+  /* caution dial */
+  .dialbox { display: grid; grid-template-columns: 132px 1fr; gap: 16px; align-items: center; background: var(--card);
+    border: 1px solid var(--ink); padding: 14px; margin-bottom: 14px; }
+  .dial { position: relative; width: 132px; height: 132px; }
+  .dial svg { width: 132px; height: 132px; transform: rotate(-90deg); }
+  .dial circle { fill: none; stroke-width: 11; }
+  .dial .track { stroke: var(--line); }
+  .dial .arc { stroke: var(--dial, var(--muted)); stroke-linecap: butt; transition: stroke-dashoffset .6s ease, stroke .4s; }
+  .dial .num { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .dial .num b { font: 700 34px/1 var(--mono); color: var(--dial, var(--ink)); }
+  .dial .num span { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .dialbox h2 { font: 700 20px/1.2 var(--mono); margin: 0 0 4px; color: var(--dial, var(--ink)); }
+  .dialbox p { margin: 0 0 6px; font-size: 14px; }
+  .bars { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; font: 12px var(--mono); margin-top: 6px; }
+  .bar { height: 7px; background: var(--line); } .bar i { display: block; height: 100%; background: var(--ink); }
+  details { margin-top: 6px; } summary { cursor: pointer; font: 12px var(--mono); color: var(--muted); }
+  details p { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  @media (max-width: 420px) { .dialbox { grid-template-columns: 1fr; justify-items: center; text-align: center; } .bars { text-align: left; } }
+
+  .tally { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); background: var(--card); margin-bottom: 14px; }
+  .tally div { padding: 8px 10px; border-right: 1px dashed var(--line); }
   .tally div:last-child { border-right: 0; }
-  .tally b { display: block; font: 700 26px/1.1 var(--mono); }
-  .tally span { font: 11px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-  @media (max-width: 560px) { .tally { grid-template-columns: repeat(2, 1fr); } .tally div:nth-child(2) { border-right: 0; } .tally div:nth-child(-n+2) { border-bottom: 1px dashed var(--line); } }
-  .item { display: grid; grid-template-columns: 52px 1fr; gap: 4px 12px; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+  .tally b { display: block; font: 700 22px/1.1 var(--mono); }
+  .tally span { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  @media (max-width: 560px) { .tally { grid-template-columns: repeat(3, 1fr); } .tally div:nth-child(3) { border-right: 0; } .tally div:nth-child(-n+3) { border-bottom: 1px dashed var(--line); } }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+  .filters button { font: 600 11px var(--mono); padding: 4px 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+  .filters button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); background: var(--paper); }
+
+  .item { display: grid; grid-template-columns: 48px 1fr; gap: 4px 10px; padding: 14px 0; border-bottom: 1px dashed var(--line); }
   .item:last-child { border-bottom: 0; padding-bottom: 0; }
+  body.embed .item { grid-template-columns: 1fr; }
   .item .ts { font: 12px var(--mono); color: var(--muted); padding-top: 3px; }
-  .item .body > p { margin: 0 0 6px; }
-  .item blockquote { margin: 0 0 6px; padding-left: 10px; border-left: 3px solid var(--line); font-style: italic; color: var(--muted); }
-  .chip { display: inline-block; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border: 1px solid currentColor; margin-right: 6px; }
-  .chip.wait { color: var(--muted); } .chip.abstain { color: var(--warn); } .chip.tech { color: var(--accent); } .chip.kind { color: var(--muted); border-style: dashed; }
-  .note { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
+  .item .claim { font-weight: 700; }
+  blockquote { margin: 0 0 8px; padding-left: 10px; border-left: 3px solid var(--line); font-style: italic; color: var(--muted); }
+  .chip { display: inline-block; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .04em; padding: 2px 7px; border: 1px solid currentColor; margin: 0 6px 6px 0; }
+  .chip.wait { color: var(--muted); border-style: dashed; }
+  .chip.v-supported { color: var(--ok); } .chip.v-mixed { color: var(--warn); } .chip.v-not_supported { color: var(--accent); }
+  .chip.v-not_enough_data { color: var(--none); } .chip.v-not_checkable { color: var(--muted); border-style: dashed; }
+  .chip.tech { color: var(--accent); } .chip.plain { color: var(--muted); }
+  .verdict { margin-top: 4px; }
+  .rule { font: 12px var(--mono); color: var(--muted); margin: 0 0 8px; }
+  .cite { border: 1px solid var(--line); background: var(--paper); padding: 10px; margin: 0 0 8px; }
+  .cite a { color: var(--ink); font-weight: 700; text-decoration-color: var(--accent); overflow-wrap: anywhere; }
+  .cite .meta { font: 12px var(--mono); color: var(--muted); margin: 2px 0 6px; overflow-wrap: anywhere; }
+  .cite blockquote { margin: 0; }
+  .stance { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: .05em; margin-right: 6px; }
+  .stance.supports { color: var(--ok); } .stance.contradicts { color: var(--accent); } .stance.context { color: var(--muted); }
+  .caveats { font-size: 13px; color: var(--muted); }
   footer { margin-top: 36px; font: 12px var(--mono); color: var(--muted); }
   [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { .dial .arc { transition: none; } }
 </style>
 </head>
 <body>
 <main>
   <header>
     <h1>Receipts<span>.</span></h1>
-    <p class="tag">Paste what a video said. Get the claims, the evidence behind them, and the rhetoric around them — with sources you can open.</p>
-    <div class="status" id="status"><span class="dot"></span>checking server…</div>
+    <p class="tag" data-full>Give it a video. Get the claims, the evidence behind them, and the rhetoric around them — with sources you can open.</p>
+    <div class="status" id="status" data-full><span class="dot"></span>checking server…</div>
   </header>
 
-  <div class="tabs" role="tablist">
-    <button role="tab" id="tab-t" aria-selected="true" aria-controls="pane-t">Transcript</button>
-    <button role="tab" id="tab-c" aria-selected="false" aria-controls="pane-c">Single claim</button>
-  </div>
-
-  <section class="panel" id="pane-t" role="tabpanel" aria-labelledby="tab-t">
-    <label for="transcript">Video transcript</label>
-    <textarea id="transcript" placeholder="Paste the transcript of a Short or a long video here…"></textarea>
-    <div class="row">
+  <div id="inputs">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-u" aria-selected="true" aria-controls="pane-u">Video link</button>
+      <button role="tab" id="tab-t" aria-selected="false" aria-controls="pane-t">Transcript</button>
+      <button role="tab" id="tab-c" aria-selected="false" aria-controls="pane-c">Single claim</button>
+    </div>
+    <section class="panel" id="pane-u" role="tabpanel" aria-labelledby="tab-u">
+      <label class="f" for="url">YouTube link (video or Short)</label>
+      <input type="url" id="url" placeholder="https://www.youtube.com/watch?v=…">
+      <div class="row"><span class="count">We fetch the captions, then analyze them.</span><button class="go" id="go-u">Analyze video</button></div>
+    </section>
+    <section class="panel" id="pane-t" role="tabpanel" aria-labelledby="tab-t" hidden>
+      <label class="f" for="transcript">Video transcript</label>
+      <textarea id="transcript" placeholder="Paste the transcript of a Short or a long video here…"></textarea>
+      <div class="row"><span class="count" id="count">0 characters</span><button class="go" id="go-t">Analyze</button></div>
+    </section>
+    <section class="panel" id="pane-c" role="tabpanel" aria-labelledby="tab-c" hidden>
+      <label class="f" for="claim">One claim to check</label>
+      <input type="text" id="claim" maxlength="600" placeholder="e.g. Drinking coffee lowers the risk of type 2 diabetes">
+      <div class="row"><button class="go" id="go-c">Check claim</button></div>
+    </section>
+    <div class="row" id="lenrow">
+      <span class="count">Summary length</span>
       <div class="seg" role="radiogroup" aria-label="Summary length">
         <label><input type="radio" name="len" value="short" checked><span>Shorter</span></label>
         <label><input type="radio" name="len" value="long"><span>Longer</span></label>
       </div>
-      <span class="count" id="count">0 characters</span>
-      <button class="go" id="go-t">Analyze</button>
     </div>
-  </section>
-
-  <section class="panel" id="pane-c" role="tabpanel" aria-labelledby="tab-c" hidden>
-    <label for="claim">One claim to check</label>
-    <input type="text" id="claim" maxlength="600" placeholder="e.g. Drinking coffee lowers the risk of type 2 diabetes">
-    <div class="row"><button class="go" id="go-c">Check claim</button></div>
-  </section>
-
-  <p class="privacy">Privacy: the text you submit is sent to our server and on to search and AI services to produce the result. No account, no API key, no personal data collected.</p>
+    <p class="privacy">Privacy: the link or text you submit is sent to our server and on to search and AI services to produce the result. No account, no API key, no personal data collected.</p>
+  </div>
 
   <div id="out" aria-live="polite"></div>
 
-  <footer>Receipts · independent hackathon project · verdicts will be derived only from retrieved sources</footer>
+  <footer data-full>Receipts · independent hackathon project · every verdict comes only from the quoted sources shown</footer>
 </main>
 
 <script>
 const $ = (id) => document.getElementById(id);
 const out = $("out");
+const EMBED = new URLSearchParams(location.search).has("embed");
+if (EMBED) { document.body.classList.add("embed"); document.querySelectorAll("[data-full]").forEach((e) => e.hidden = true); $("inputs").hidden = true; }
 
-function slip(title, cls) {
-  const el = document.createElement("section");
-  el.className = "slip" + (cls ? " " + cls : "");
-  const h = document.createElement("h2");
-  h.textContent = title;
-  el.appendChild(h);
-  out.appendChild(el);
-  return el;
-}
-function para(parent, text) {
-  const p = document.createElement("p");
-  p.style.margin = "0 0 8px";
-  p.textContent = text;
-  parent.appendChild(p);
-  return p;
-}
-
-async function post(path, body) {
-  let r;
-  try {
-    r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  } catch (e) {
-    return { ok: false, data: { error: "network", message: "Could not reach the server." } };
-  }
-  let data = null;
-  try { data = await r.json(); } catch (e) {}
-  if (r.status === 422 && data && Array.isArray(data.detail)) {
-    data = { error: "invalid_input", message: data.detail.map((d) => d.msg).join("; ") };
-  }
-  return { ok: r.ok, status: r.status, data: data || { error: "bad_response", message: "Unreadable server response (HTTP " + r.status + ")." } };
-}
-
-function showFailure(title, res) {
-  const pending = res.status === 501;
-  const el = slip(title + (pending ? " — not built yet" : " — failed"), pending ? "pending" : "err");
-  para(el, res.data.message || "Unknown error.");
-  para(el, "No result was produced. Nothing here is a default or a guess.").style.color = "var(--muted)";
-}
+let run = 0;            // increments on every new analysis; stale responses are ignored
+let state = null;       // current analysis: {words, claims:[{..., result}], flags}
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -160,123 +173,305 @@ function el(tag, cls, text) {
   if (text != null) e.textContent = text;
   return e;
 }
-function partFailed(title, part) {
-  const pending = part.error === "not_implemented";
-  const s = slip(title + (pending ? " — not built yet" : " — failed"), pending ? "pending" : "err");
-  para(s, part.message || "Unknown error.");
-  if (!pending) para(s, "No result was produced. Nothing here is a default or a guess.").style.color = "var(--muted)";
+function slip(title, cls) {
+  const s = el("section", "slip" + (cls ? " " + cls : ""));
+  s.appendChild(el("h2", null, title));
+  out.appendChild(s);
+  return s;
 }
-function tally(d) {
-  const t = el("div", "tally");
-  const cell = (n, label) => { const c = el("div"); c.append(el("b", null, n), el("span", null, label)); t.appendChild(c); };
-  const c = d.claims.status === "ok" ? d.claims.counts : null;
-  const m = d.manipulation.status === "ok" ? d.manipulation.counts : null;
-  cell(c ? c.total : "–", "claims found");
-  cell(c ? c.checkable : "–", "checkable");
-  cell(c ? c.not_checkable : "–", "not checkable");
-  cell(m ? m.total : "–", "rhetoric flags");
+function fail(title, message) {
+  const s = slip(title, "err");
+  s.appendChild(el("p", null, message || "Unknown error."));
+  s.appendChild(el("p", "note", "No result was produced. Nothing here is a default or a guess."));
+  return s;
+}
+async function post(path, body) {
+  let r;
+  try { r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); }
+  catch (e) { return { ok: false, data: { error: "network", message: "Could not reach the server." } }; }
+  let data = null;
+  try { data = await r.json(); } catch (e) {}
+  if (r.status === 422 && data && Array.isArray(data.detail)) data = { error: "invalid_input", message: data.detail.map((d) => d.msg).join("; ") };
+  return { ok: r.ok, status: r.status, data: data || { error: "bad_response", message: "Unreadable server response (HTTP " + r.status + ")." } };
+}
+const summaryLength = () => document.querySelector("input[name=len]:checked").value;
+
+/* ---------- caution score (transparent rule) ---------- */
+function caution() {
+  const done = state.claims.filter((c) => c.result && c.result.status === "ok");
+  const pending = state.claims.filter((c) => c.checkable && !c.result).length;
+  const n = { supported: 0, mixed: 0, not_supported: 0, not_enough_data: 0, not_checkable: 0 };
+  done.forEach((c) => n[c.result.verdict]++);
+  state.claims.filter((c) => !c.checkable).forEach(() => n.not_checkable++);
+  const judged = n.supported + n.mixed + n.not_supported;
+  const e = judged ? (n.not_supported + 0.5 * n.mixed) / judged : null;
+  const flags = state.flags || [];
+  const density = state.words ? (flags.length / state.words) * 100 : 0;
+  const distinct = new Set(flags.map((f) => f.technique)).size;
+  const m = state.flagsOk ? 0.6 * Math.min(1, density / 1.5) + 0.4 * Math.min(1, distinct / 5) : null;
+  let score = null, basis;
+  if (e != null && m != null) { score = Math.round(100 * (0.6 * e + 0.4 * m)); basis = "Evidence counts for 60% and rhetoric for 40%."; }
+  else if (m != null) { score = Math.round(100 * m); basis = "Rhetoric only: no claim in this video could be judged against evidence."; }
+  else if (e != null) { score = Math.round(100 * e); basis = "Evidence only: the rhetoric check did not run."; }
+  else basis = "Neither lens produced a result, so no score is shown.";
+  const level = score == null ? "none" : score < 25 ? "low" : score < 55 ? "some" : "high";
+  return { score, level, basis, e, m, n, judged, pending, flags: flags.length, distinct, density };
+}
+const LEVELS = {
+  low: ["Low caution", "var(--ok)", "The checkable claims held up and the wording is mostly plain."],
+  some: ["Some caution", "var(--warn)", "Part of this video is disputed, unsupported or leans on persuasion techniques."],
+  high: ["High caution", "var(--accent)", "Much of this video is contradicted by the evidence found or relies heavily on persuasion techniques."],
+  none: ["No score", "var(--muted)", "There was not enough to score."],
+};
+function drawDial() {
+  const c = caution(), box = $("dialbox");
+  if (!box) return;
+  const [title, color, blurb] = LEVELS[c.level];
+  box.style.setProperty("--dial", color);
+  const R = 54, C = 2 * Math.PI * R;
+  box.querySelector(".arc").setAttribute("stroke-dasharray", C);
+  box.querySelector(".arc").setAttribute("stroke-dashoffset", C * (1 - (c.score || 0) / 100));
+  box.querySelector(".num b").textContent = c.score == null ? "–" : c.score;
+  box.querySelector("h2").textContent = title + (c.pending ? " (provisional)" : "");
+  box.querySelector(".blurb").textContent = c.pending ? "Still checking " + c.pending + " claim(s) against sources…" : blurb;
+  const pct = (x) => (x == null ? "n/a" : Math.round(x * 100) + "%");
+  box.querySelector(".e-bar i").style.width = (c.e == null ? 0 : c.e * 100) + "%";
+  box.querySelector(".m-bar i").style.width = (c.m == null ? 0 : c.m * 100) + "%";
+  box.querySelector(".e-val").textContent = pct(c.e);
+  box.querySelector(".m-val").textContent = pct(c.m);
+  box.querySelector(".how").textContent =
+    "Evidence concern = (claims not supported + half of mixed claims) ÷ claims with a verdict = " +
+    (c.judged ? "(" + c.n.not_supported + " + ½×" + c.n.mixed + ") ÷ " + c.judged : "no judged claims") +
+    ". Rhetoric concern = 60% × flags per 100 words (" + c.density.toFixed(1) + ", full marks at 1.5) + 40% × distinct techniques (" + c.distinct +
+    ", full marks at 5). " + c.basis + " Claims we abstained on (" + (c.n.not_enough_data + c.n.not_checkable) +
+    ") do not move the score. Under 25 is low, 25 to 54 some, 55 and over high. This is a reading aid, not a judgement of the speaker.";
+  const t = $("tally");
+  if (t) {
+    const vals = [state.claims.length, c.n.supported, c.n.mixed, c.n.not_supported, c.n.not_enough_data + c.n.not_checkable];
+    t.querySelectorAll("b").forEach((b, i) => b.textContent = vals[i]);
+  }
+  if (EMBED) parent.postMessage({ type: "receipts:score", score: c.score, level: c.level, pending: c.pending }, "*");
+}
+function buildDial() {
+  const box = el("div", "dialbox"); box.id = "dialbox";
+  box.innerHTML = '<div class="dial"><svg viewBox="0 0 132 132" aria-hidden="true"><circle class="track" cx="66" cy="66" r="54"/><circle class="arc" cx="66" cy="66" r="54"/></svg><div class="num"><b>–</b><span>caution / 100</span></div></div>' +
+    '<div><h2></h2><p class="blurb"></p><div class="bars"><span>Evidence</span><div class="bar e-bar"><i></i></div><span class="e-val"></span><span>Rhetoric</span><div class="bar m-bar"><i></i></div><span class="m-val"></span></div>' +
+    '<details><summary>How this score is calculated</summary><p class="how"></p></details></div>';
+  out.appendChild(box);
+  const t = el("div", "tally"); t.id = "tally";
+  ["claims", "supported", "mixed", "not supported", "abstained"].forEach((label) => { const d = el("div"); d.append(el("b", null, "–"), el("span", null, label)); t.appendChild(d); });
   out.appendChild(t);
 }
-function renderSummary(sum, length) {
-  if (sum.status !== "ok") return partFailed("Summary", sum);
-  const s = slip("Summary (" + (length === "short" ? "shorter" : "longer") + ")");
-  sum.summary.split(/\n{2,}/).forEach((t) => para(s, t));
-  if (sum.key_points && sum.key_points.length) {
-    const ul = el("ul");
-    sum.key_points.forEach((k) => ul.appendChild(el("li", null, k)));
-    s.appendChild(ul);
+
+/* ---------- rendering ---------- */
+function renderVerdict(box, r) {
+  box.replaceChildren();
+  if (r.status !== "ok") {
+    box.appendChild(el("span", "chip v-not_enough_data", "Check failed"));
+    box.appendChild(el("p", "note", (r.message || "Unknown error.") + " No verdict was produced."));
+    return;
   }
+  box.appendChild(el("span", "chip v-" + r.verdict, r.verdict_label));
+  if (r.confidence) box.appendChild(el("span", "chip plain", r.confidence + " confidence"));
+  if (r.source_type) box.appendChild(el("span", "chip plain", r.source_type === "research" ? "research papers" : "news and web"));
+  if (r.cached) box.appendChild(el("span", "chip plain", "saved result"));
+  if (r.explanation) box.appendChild(el("p", null, r.explanation));
+  box.appendChild(el("p", "rule", r.confidence_rule));
+  r.citations.forEach((c) => {
+    const d = el("div", "cite");
+    const a = el("a", null, c.title); a.href = c.url; a.target = "_blank"; a.rel = "noopener noreferrer";
+    d.appendChild(a);
+    d.appendChild(el("div", "meta", [c.authors, c.year, c.venue].filter(Boolean).join(" · ")));
+    const q = el("blockquote");
+    q.appendChild(el("span", "stance " + c.stance, c.stance === "supports" ? "supports" : c.stance === "contradicts" ? "contradicts" : "context"));
+    q.appendChild(document.createTextNode("“" + c.snippet + "”"));
+    d.appendChild(q);
+    box.appendChild(d);
+  });
+  if (r.source_note) box.appendChild(el("p", "note", r.source_note));
+  if (r.caveats.length) box.appendChild(el("p", "caveats", "Caveats: " + r.caveats.join(" · ")));
 }
-function renderClaims(part) {
-  if (part.status !== "ok") return partFailed("Claims", part);
-  const s = slip("Claims in this video");
-  if (!part.claims.length) { para(s, "No factual claims found. This looks like opinion, story or commentary."); return; }
-  if (!part.has_timestamps) s.appendChild(el("p", "note", "No timestamps in this transcript, so none are shown."));
-  part.claims.forEach((c) => {
-    const row = el("div", "item");
-    row.appendChild(el("div", "ts", c.timestamp || "—"));
-    const b = el("div", "body");
-    b.appendChild(el("p", null, c.text));
-    if (c.quote) b.appendChild(el("blockquote", null, "“" + c.quote + "”"));
-    else b.appendChild(el("p", "note", "The exact wording could not be matched in the transcript, so no quote is shown."));
-    if (c.checkable) {
-      b.appendChild(el("span", "chip wait", "Checkable · evidence pending"));
-      b.appendChild(el("span", "chip kind", c.kind === "scientific" ? "research sources" : "news sources"));
-    } else b.appendChild(el("span", "chip abstain", "Not checkable · " + c.why_not_checkable));
-    row.appendChild(b);
-    s.appendChild(row);
+function claimRow(c) {
+  const row = el("div", "item");
+  if (!EMBED) row.appendChild(el("div", "ts", c.timestamp || "—"));
+  const b = el("div");
+  b.appendChild(el("p", "claim", (EMBED && c.timestamp ? c.timestamp + "  " : "") + c.text));
+  if (c.quote) b.appendChild(el("blockquote", null, "“" + c.quote + "”"));
+  else if (c.quote === null) b.appendChild(el("p", "note", "The exact wording could not be matched in the transcript, so no quote is shown."));
+  const v = el("div", "verdict");
+  if (c.checkable) v.appendChild(el("span", "chip wait", "Checking sources…"));
+  else { v.appendChild(el("span", "chip v-not_checkable", "Not checkable")); v.appendChild(el("p", "note", c.why_not_checkable)); }
+  b.appendChild(v);
+  row.appendChild(b);
+  c.row = row; c.box = v;
+  return row;
+}
+function applyFilter(which) {
+  state.filter = which;
+  document.querySelectorAll(".filters button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.f === which)));
+  state.claims.forEach((c) => {
+    const v = !c.checkable ? "not_checkable" : c.result && c.result.status === "ok" ? c.result.verdict : "pending";
+    const group = v === "not_enough_data" || v === "not_checkable" ? "abstained" : v;
+    c.row.hidden = !(which === "all" || group === which);
   });
 }
+function renderClaims(part) {
+  if (part.status !== "ok") { state.claims = []; return fail("Claims — failed", part.message); }
+  const s = slip("Claims in this video");
+  state.claims = part.claims;
+  if (!part.claims.length) { s.appendChild(el("p", null, "No factual claims found. This looks like opinion, story or commentary.")); return; }
+  const f = el("div", "filters");
+  [["all", "All"], ["supported", "Supported"], ["mixed", "Mixed"], ["not_supported", "Not supported"], ["abstained", "Abstained"]].forEach(([k, label]) => {
+    const b = el("button", null, label); b.dataset.f = k; b.setAttribute("aria-pressed", String(k === "all")); b.onclick = () => applyFilter(k); f.appendChild(b);
+  });
+  s.appendChild(f);
+  part.claims.forEach((c) => s.appendChild(claimRow(c)));
+}
+function renderSummary(sum, length) {
+  if (sum.status !== "ok") return fail("Summary — failed", sum.message);
+  const s = slip("Summary (" + (length === "short" ? "shorter" : "longer") + ")");
+  sum.summary.split(/\n{2,}/).forEach((t) => s.appendChild(el("p", null, t)));
+  if (sum.key_points && sum.key_points.length) { const ul = el("ul"); sum.key_points.forEach((k) => ul.appendChild(el("li", null, k))); s.appendChild(ul); }
+}
 function renderManipulation(part) {
-  if (part.status !== "ok") return partFailed("Manipulation lens", part);
+  state.flagsOk = part.status === "ok";
+  state.flags = state.flagsOk ? part.flags : [];
+  if (!state.flagsOk) return fail("Manipulation lens — failed", part.message);
   const s = slip("Manipulation lens");
-  s.appendChild(el("p", "note", "How the wording works on a listener. A technique does not make a statement false; this lens is separate from the evidence check."));
-  if (!part.flags.length) { para(s, "No clear persuasion techniques found among the " + part.techniques_checked.length + " we look for."); return; }
+  s.appendChild(el("p", "note", "How the wording works on a listener. A technique does not make a statement false; this lens is kept separate from the evidence check."));
+  if (!part.flags.length) { s.appendChild(el("p", null, "No clear persuasion techniques found among the " + part.techniques_checked.length + " we look for.")); return; }
   part.flags.forEach((f) => {
     const row = el("div", "item");
-    row.appendChild(el("div", "ts", f.timestamp || "—"));
-    const b = el("div", "body");
+    if (!EMBED) row.appendChild(el("div", "ts", f.timestamp || "—"));
+    const b = el("div");
     b.appendChild(el("span", "chip tech", f.label));
+    if (EMBED && f.timestamp) b.appendChild(el("span", "chip plain", f.timestamp));
     b.appendChild(el("blockquote", null, "“" + f.quote + "”"));
     b.appendChild(el("p", null, f.explanation));
-    row.appendChild(b);
-    s.appendChild(row);
+    row.appendChild(b); s.appendChild(row);
   });
   if (part.counts.dropped_unverified) s.appendChild(el("p", "note", part.counts.dropped_unverified + " flag(s) were discarded because their quote was not found in the transcript."));
 }
 
-async function analyze() {
-  const transcript = $("transcript").value.trim();
+/* ---------- flows ---------- */
+async function checkAll(mine) {
+  const queue = state.claims.filter((c) => c.checkable);
+  const worker = async () => {
+    while (queue.length && mine === run) {
+      const c = queue.shift();
+      const res = await post("/check", { claim: c.text, kind: c.kind, search_queries: c.search_queries, key_terms: c.key_terms });
+      if (mine !== run) return;
+      c.result = res.ok ? res.data : { status: "error", message: res.data.message };
+      renderVerdict(c.box, c.result);
+      drawDial();
+      if (state.filter && state.filter !== "all") applyFilter(state.filter);
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+}
+function working(text) {
   out.replaceChildren();
-  if (transcript.length < 40) { para(slip("Transcript needed", "err"), "Paste at least a few sentences of transcript."); return; }
-  const length = document.querySelector("input[name=len]:checked").value;
-  $("go-t").disabled = true; $("go-t").textContent = "Working…";
+  const s = slip("Working");
+  s.appendChild(el("p", null, text));
+  return s;
+}
+async function analyzeTranscript(transcript, title) {
+  const mine = ++run;
+  const length = summaryLength();
+  working("Reading the transcript: summary, claims and rhetoric…");
   const res = await post("/analyze", { transcript, summary_length: length });
-  $("go-t").disabled = false; $("go-t").textContent = "Analyze";
-  if (!res.ok) return showFailure("Analysis", res);
+  if (mine !== run) return;
+  out.replaceChildren();
+  if (title) out.appendChild(el("p", "video", title));
+  if (!res.ok) return fail("Analysis — failed", res.data.message);
   const d = res.data;
-  tally(d);
+  state = { words: d.claims.status === "ok" ? d.claims.words : transcript.split(/\s+/).length, claims: [], flags: [], flagsOk: false, filter: "all" };
+  buildDial();
   renderSummary(d.summary, length);
   renderClaims(d.claims);
-  if (d.evidence.status !== "ok") partFailed("Evidence check", d.evidence);
   renderManipulation(d.manipulation);
+  drawDial();
+  await checkAll(mine);
+  if (mine === run) drawDial();
 }
-
+function noTranscript(message, title) {
+  out.replaceChildren();
+  if (title) out.appendChild(el("p", "video", title));
+  const s = slip("No transcript available", "err");
+  s.appendChild(el("p", null, message || "This video has no captions we can read."));
+  s.appendChild(el("p", "note", "You can paste the transcript here instead."));
+  const ta = el("textarea"); ta.placeholder = "Paste the transcript…"; s.appendChild(ta);
+  const row = el("div", "row"); const b = el("button", "go", "Analyze pasted text");
+  b.onclick = () => { if (ta.value.trim().length >= 40) analyzeTranscript(ta.value.trim(), title); };
+  row.appendChild(b); s.appendChild(row);
+}
+async function analyzeUrl(url, title) {
+  const mine = ++run;
+  working("Fetching the captions for this video…");
+  if (title) out.prepend(el("p", "video", title));
+  const res = await post("/transcript", { url });
+  if (mine !== run) return;
+  if (res.ok) return analyzeTranscript(res.data.transcript, title);
+  if (EMBED) { pendingVideo = { url, title, message: res.data.message }; parent.postMessage({ type: "receipts:need-transcript", url }, "*"); return; }
+  noTranscript(res.data.message, title);
+}
 async function checkClaim() {
   const claim = $("claim").value.trim();
+  const mine = ++run;
   out.replaceChildren();
-  if (claim.length < 8) { para(slip("Claim needed", "err"), "Type a full sentence to check."); return; }
+  if (claim.length < 8) return fail("Claim needed", "Type a full sentence to check.");
   $("go-c").disabled = true;
+  const s = slip("Evidence check");
+  s.appendChild(el("p", "claim", claim));
+  const box = el("div", "verdict"); box.appendChild(el("span", "chip wait", "Checking sources…")); s.appendChild(box);
   const res = await post("/check", { claim });
-  if (!res.ok) showFailure("Evidence check", res);
   $("go-c").disabled = false;
+  if (mine !== run) return;
+  renderVerdict(box, res.ok ? res.data : { status: "error", message: res.data.message });
 }
 
+/* ---------- wiring ---------- */
 function selectTab(which) {
-  for (const k of ["t", "c"]) {
-    $("tab-" + k).setAttribute("aria-selected", String(k === which));
-    $("pane-" + k).hidden = k !== which;
-  }
+  for (const k of ["u", "t", "c"]) { $("tab-" + k).setAttribute("aria-selected", String(k === which)); $("pane-" + k).hidden = k !== which; }
+  $("lenrow").hidden = which === "c";
 }
-$("tab-t").onclick = () => selectTab("t");
-$("tab-c").onclick = () => selectTab("c");
-$("go-t").onclick = analyze;
+["u", "t", "c"].forEach((k) => $("tab-" + k).onclick = () => selectTab(k));
+$("go-u").onclick = () => { const u = $("url").value.trim(); if (u.length < 11) { out.replaceChildren(); return fail("Link needed", "Paste a YouTube video or Shorts link."); } analyzeUrl(u); };
+$("go-t").onclick = () => { const t = $("transcript").value.trim(); if (t.length < 40) { out.replaceChildren(); return fail("Transcript needed", "Paste at least a few sentences of transcript."); } analyzeTranscript(t); };
 $("go-c").onclick = checkClaim;
+$("url").addEventListener("keydown", (e) => { if (e.key === "Enter") $("go-u").click(); });
 $("claim").addEventListener("keydown", (e) => { if (e.key === "Enter") checkClaim(); });
 $("transcript").addEventListener("input", () => { $("count").textContent = $("transcript").value.length.toLocaleString() + " characters"; });
 
-(async () => {
-  const s = $("status");
-  try {
-    const h = await (await fetch("/health")).json();
-    const cls = h.llm_configured ? "ok" : "warn";
-    s.innerHTML = '<span class="dot ' + cls + '"></span>';
-    s.append("server ok · v" + h.version + " · AI " + (h.llm_configured ? "ready" : "not configured") + " · web search " + (h.web_search_configured ? "ready" : "not configured"));
-  } catch (e) {
-    s.innerHTML = '<span class="dot bad"></span>';
-    s.append("server unreachable");
-  }
-})();
+/* ---------- embedded in the browser extension's side panel ---------- */
+let pendingVideo = null;
+if (EMBED) {
+  window.addEventListener("message", (ev) => {
+    if (!ev.origin.startsWith("chrome-extension://")) return;
+    const m = ev.data || {};
+    if (m.type === "receipts:video") {
+      if (m.transcript && m.transcript.length >= 40) analyzeTranscript(m.transcript, m.title);
+      else analyzeUrl(m.url, m.title);
+    } else if (m.type === "receipts:transcript-result" && pendingVideo && m.url === pendingVideo.url) {
+      const p = pendingVideo; pendingVideo = null;
+      if (m.transcript && m.transcript.length >= 40) analyzeTranscript(m.transcript, p.title);
+      else noTranscript(p.message, p.title);
+    } else if (m.type === "receipts:idle") {
+      run++; out.replaceChildren();
+      slip("Waiting for a video").appendChild(el("p", null, m.message || "Open a YouTube video or Short and it will be checked here."));
+    }
+  });
+  parent.postMessage({ type: "receipts:ready" }, "*");
+} else {
+  (async () => {
+    const s = $("status");
+    try {
+      const h = await (await fetch("/health")).json();
+      s.innerHTML = '<span class="dot ' + (h.llm_configured ? "ok" : "warn") + '"></span>';
+      s.append("server ok · v" + h.version + " · AI " + (h.llm_configured ? "ready" : "not configured") + " · web search " + (h.web_search_configured ? "ready" : "not configured"));
+    } catch (e) { s.innerHTML = '<span class="dot bad"></span>'; s.append("server unreachable"); }
+  })();
+}
 </script>
 </body>
 </html>

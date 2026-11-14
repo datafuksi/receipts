@@ -128,7 +128,7 @@ def test_result_is_cached_and_offline_mode_uses_only_cache(monkeypatch):
 
 
 def test_claim_budget_scales_with_length():
-    assert claim_budget("word " * 150) == 4
+    assert claim_budget("word " * 150) == 5
     assert claim_budget("word " * 1500) == 12
     assert claim_budget("word " * 9000) == 30
 

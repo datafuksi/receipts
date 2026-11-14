@@ -70,7 +70,7 @@ MAX_CLAIMS_CEILING = 30  # each checkable claim costs searches and an AI call
 def claim_budget(transcript: str) -> int:
     """How many claims to ask for: about one per 120 words, so a Short gets a few and a long video many."""
     words = len(transcript.split())
-    return max(4, min(MAX_CLAIMS_CEILING, round(words / 120)))
+    return max(5, min(MAX_CLAIMS_CEILING, round(words / 120)))
 
 
 class RawClaim(BaseModel):
