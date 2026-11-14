@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Receipts</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; flex-direction: column; font: 12px ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+    background: #f6f1e7; color: #1c1a17; }
+  @media (prefers-color-scheme: dark) { body { background: #16150f; color: #efe9dc; } .bar { border-color: #3a372e; } button { color: #efe9dc; border-color: #efe9dc; } }
+  .bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #cfc6b4; flex-wrap: wrap; }
+  .bar label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  button { font: inherit; font-weight: 700; padding: 4px 8px; background: transparent; border: 1px solid #1c1a17; cursor: pointer; margin-left: auto; }
+  button[hidden] { display: none; }
+  #msg { padding: 14px 12px; line-height: 1.5; }
+  #msg[hidden] { display: none; }
+  iframe { flex: 1; width: 100%; border: 0; }
+  .privacy { padding: 6px 10px; opacity: .75; border-top: 1px solid #cfc6b4; line-height: 1.4; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <label><input type="checkbox" id="auto"> Auto-check as I scroll</label>
+    <button id="check" hidden>Check this video</button>
+  </div>
+  <div id="msg" hidden></div>
+  <iframe id="app" title="Receipts results" referrerpolicy="no-referrer"></iframe>
+  <div class="privacy">When a video is checked, its link and captions are sent to the Receipts server and to search and AI services. Nothing is sent while this panel is closed.</div>
+  <script src="panel.js"></script>
+</body>
+</html>

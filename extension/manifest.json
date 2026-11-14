@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Receipts — evidence and rhetoric check for videos",
+  "short_name": "Receipts",
+  "version": "0.1.0",
+  "description": "Checks the claims in the YouTube video or Short you are watching against research and news sources, and flags persuasion techniques.",
+  "permissions": ["sidePanel", "storage"],
+  "host_permissions": ["https://www.youtube.com/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Open Receipts" },
+  "side_panel": { "default_path": "panel.html" },
+  "content_scripts": [
+    { "matches": ["https://www.youtube.com/*"], "js": ["content.js"], "run_at": "document_idle" }
+  ]
+}
