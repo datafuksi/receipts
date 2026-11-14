@@ -4,6 +4,7 @@ Rules: temperature 0, JSON output validated against a schema, one retry on a
 parse failure, then an explicit failure. A refusal or an outage is surfaced as
 an error state; prompts are never reworded to get around a refusal.
 """
+import asyncio
 import re
 from typing import TypeVar
 
@@ -37,22 +38,36 @@ def _strip_fences(text: str) -> str:
     return m.group(1) if m else text.strip()
 
 
+_TRANSIENT = {429, 500, 502, 503, 504}
+_BACKOFF = (1.0, 2.5)  # seconds before the 2nd and 3rd attempt
+
+
 async def _post_chat(payload: dict, s: Settings) -> dict:
-    try:
-        async with httpx.AsyncClient(timeout=90) as client:
-            r = await client.post(
-                f"{s.router_base_url}/chat/completions",
-                json=payload,
-                headers={"Authorization": f"Bearer {s.router_api_key}"},
-            )
-    except httpx.HTTPError:
-        raise LLMError("router_unavailable", "The AI service could not be reached. Try again shortly.")
-    if r.status_code >= 400:
-        raise LLMError("router_unavailable", f"The AI service returned HTTP {r.status_code}.")
-    try:
-        return r.json()
-    except ValueError:
-        raise LLMError("router_unavailable", "The AI service returned an unreadable response.")
+    """POST to the router. Transient outages (network error, 429, 5xx) are retried twice with the
+    same request; the prompt is never changed."""
+    error = LLMError("router_unavailable", "The AI service could not be reached. Try again shortly.")
+    for attempt in range(len(_BACKOFF) + 1):
+        if attempt:
+            await asyncio.sleep(_BACKOFF[attempt - 1])
+        try:
+            async with httpx.AsyncClient(timeout=90) as client:
+                r = await client.post(
+                    f"{s.router_base_url}/chat/completions",
+                    json=payload,
+                    headers={"Authorization": f"Bearer {s.router_api_key}"},
+                )
+        except httpx.HTTPError:
+            continue
+        if r.status_code in _TRANSIENT:
+            error = LLMError("router_unavailable", f"The AI service returned HTTP {r.status_code}. Try again shortly.")
+            continue
+        if r.status_code >= 400:
+            raise LLMError("router_unavailable", f"The AI service returned HTTP {r.status_code}.")
+        try:
+            return r.json()
+        except ValueError:
+            raise LLMError("router_unavailable", "The AI service returned an unreadable response.")
+    raise error
 
 
 async def chat_json(system: str, user: str, schema: type[T], max_tokens: int = 2000) -> T:
