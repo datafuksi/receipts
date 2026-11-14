@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receipts — check what a video claims</title>
+<style>
+  :root {
+    --paper: #f6f1e7; --ink: #1c1a17; --muted: #6b655b; --line: #cfc6b4;
+    --card: #fffdf8; --accent: #b3261e; --ok: #1f6f43; --warn: #8a5a00;
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #16150f; --ink: #efe9dc; --muted: #a39c8d; --line: #3a372e;
+            --card: #1e1c15; --accent: #ff8a7a; --ok: #7fd4a3; --warn: #e6b34d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--serif); }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 64px; }
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 22px; }
+  h1 { font: 700 34px/1 var(--mono); letter-spacing: -1px; margin: 0 0 8px; }
+  h1 span { color: var(--accent); }
+  .tag { margin: 0; color: var(--muted); }
+  .status { font: 12px var(--mono); color: var(--muted); margin-top: 10px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
+  .dot.ok { background: var(--ok); } .dot.bad { background: var(--accent); } .dot.warn { background: var(--warn); }
+  .tabs { display: flex; gap: 0; margin-bottom: -1px; }
+  .tabs button { font: 600 13px var(--mono); padding: 10px 14px; background: transparent; color: var(--muted);
+    border: 1px solid transparent; border-bottom: 0; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--ink); border-color: var(--line); }
+  .panel { background: var(--card); border: 1px solid var(--line); padding: 16px; }
+  label { display: block; font: 600 12px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+  textarea, input[type=text] { width: 100%; font: 15px/1.5 var(--serif); color: var(--ink); background: var(--paper);
+    border: 1px solid var(--line); padding: 10px; border-radius: 0; }
+  textarea { min-height: 180px; resize: vertical; }
+  textarea:focus, input:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+  .seg { display: inline-flex; border: 1px solid var(--ink); }
+  .seg label { margin: 0; padding: 7px 12px; cursor: pointer; text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .seg input { position: absolute; opacity: 0; }
+  .seg input:checked + span { text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--accent); }
+  .go { font: 700 14px var(--mono); padding: 10px 18px; background: var(--ink); color: var(--paper); border: 0; cursor: pointer; margin-left: auto; }
+  .go:disabled { opacity: .5; cursor: wait; }
+  .count { font: 12px var(--mono); color: var(--muted); }
+  .privacy { font-size: 13px; color: var(--muted); margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 10px; }
+  #out { margin-top: 22px; }
+  .slip { background: var(--card); border: 1px solid var(--line); padding: 16px; margin-bottom: 14px; }
+  .slip h2 { font: 700 13px var(--mono); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 10px;
+    padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+  .slip ul { margin: 10px 0 0; padding-left: 20px; }
+  .err { border-left: 4px solid var(--accent); }
+  .err h2 { color: var(--accent); }
+  .pending { border-left: 4px solid var(--warn); }
+  .pending h2 { color: var(--warn); }
+  footer { margin-top: 36px; font: 12px var(--mono); color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Receipts<span>.</span></h1>
+    <p class="tag">Paste what a video said. Get the claims, the evidence behind them, and the rhetoric around them — with sources you can open.</p>
+    <div class="status" id="status"><span class="dot"></span>checking server…</div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-t" aria-selected="true" aria-controls="pane-t">Transcript</button>
+    <button role="tab" id="tab-c" aria-selected="false" aria-controls="pane-c">Single claim</button>
+  </div>
+
+  <section class="panel" id="pane-t" role="tabpanel" aria-labelledby="tab-t">
+    <label for="transcript">Video transcript</label>
+    <textarea id="transcript" placeholder="Paste the transcript of a Short or a long video here…"></textarea>
+    <div class="row">
+      <div class="seg" role="radiogroup" aria-label="Summary length">
+        <label><input type="radio" name="len" value="short" checked><span>Shorter</span></label>
+        <label><input type="radio" name="len" value="long"><span>Longer</span></label>
+      </div>
+      <span class="count" id="count">0 characters</span>
+      <button class="go" id="go-t">Analyze</button>
+    </div>
+  </section>
+
+  <section class="panel" id="pane-c" role="tabpanel" aria-labelledby="tab-c" hidden>
+    <label for="claim">One claim to check</label>
+    <input type="text" id="claim" maxlength="600" placeholder="e.g. Drinking coffee lowers the risk of type 2 diabetes">
+    <div class="row"><button class="go" id="go-c">Check claim</button></div>
+  </section>
+
+  <p class="privacy">Privacy: the text you submit is sent to our server and on to search and AI services to produce the result. No account, no API key, no personal data collected.</p>
+
+  <div id="out" aria-live="polite"></div>
+
+  <footer>Receipts · independent hackathon project · verdicts will be derived only from retrieved sources</footer>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const out = $("out");
+
+function slip(title, cls) {
+  const el = document.createElement("section");
+  el.className = "slip" + (cls ? " " + cls : "");
+  const h = document.createElement("h2");
+  h.textContent = title;
+  el.appendChild(h);
+  out.appendChild(el);
+  return el;
+}
+function para(parent, text) {
+  const p = document.createElement("p");
+  p.style.margin = "0 0 8px";
+  p.textContent = text;
+  parent.appendChild(p);
+  return p;
+}
+
+async function post(path, body) {
+  let r;
+  try {
+    r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  } catch (e) {
+    return { ok: false, data: { error: "network", message: "Could not reach the server." } };
+  }
+  let data = null;
+  try { data = await r.json(); } catch (e) {}
+  if (r.status === 422 && data && Array.isArray(data.detail)) {
+    data = { error: "invalid_input", message: data.detail.map((d) => d.msg).join("; ") };
+  }
+  return { ok: r.ok, status: r.status, data: data || { error: "bad_response", message: "Unreadable server response (HTTP " + r.status + ")." } };
+}
+
+function showFailure(title, res) {
+  const pending = res.status === 501;
+  const el = slip(title + (pending ? " — not built yet" : " — failed"), pending ? "pending" : "err");
+  para(el, res.data.message || "Unknown error.");
+  para(el, "No result was produced. Nothing here is a default or a guess.").style.color = "var(--muted)";
+}
+
+async function analyze() {
+  const transcript = $("transcript").value.trim();
+  out.replaceChildren();
+  if (transcript.length < 40) { para(slip("Transcript needed", "err"), "Paste at least a few sentences of transcript."); return; }
+  const length = document.querySelector("input[name=len]:checked").value;
+  $("go-t").disabled = true; $("go-t").textContent = "Working…";
+  const [sum, full] = await Promise.all([
+    post("/summarize", { transcript, length }),
+    post("/analyze", { transcript, summary_length: length }),
+  ]);
+  if (sum.ok) {
+    const el = slip("Summary (" + (length === "short" ? "shorter" : "longer") + ")");
+    sum.data.summary.split(/\n{2,}/).forEach((t) => para(el, t));
+    if (sum.data.key_points && sum.data.key_points.length) {
+      const ul = document.createElement("ul");
+      sum.data.key_points.forEach((k) => { const li = document.createElement("li"); li.textContent = k; ul.appendChild(li); });
+      el.appendChild(ul);
+    }
+  } else showFailure("Summary", sum);
+  if (!full.ok) showFailure("Claims, evidence and manipulation lens", full);
+  $("go-t").disabled = false; $("go-t").textContent = "Analyze";
+}
+
+async function checkClaim() {
+  const claim = $("claim").value.trim();
+  out.replaceChildren();
+  if (claim.length < 8) { para(slip("Claim needed", "err"), "Type a full sentence to check."); return; }
+  $("go-c").disabled = true;
+  const res = await post("/check", { claim });
+  if (!res.ok) showFailure("Evidence check", res);
+  $("go-c").disabled = false;
+}
+
+function selectTab(which) {
+  for (const k of ["t", "c"]) {
+    $("tab-" + k).setAttribute("aria-selected", String(k === which));
+    $("pane-" + k).hidden = k !== which;
+  }
+}
+$("tab-t").onclick = () => selectTab("t");
+$("tab-c").onclick = () => selectTab("c");
+$("go-t").onclick = analyze;
+$("go-c").onclick = checkClaim;
+$("claim").addEventListener("keydown", (e) => { if (e.key === "Enter") checkClaim(); });
+$("transcript").addEventListener("input", () => { $("count").textContent = $("transcript").value.length.toLocaleString() + " characters"; });
+
+(async () => {
+  const s = $("status");
+  try {
+    const h = await (await fetch("/health")).json();
+    const cls = h.llm_configured ? "ok" : "warn";
+    s.innerHTML = '<span class="dot ' + cls + '"></span>';
+    s.append("server ok · v" + h.version + " · AI " + (h.llm_configured ? "ready" : "not configured") + " · web search " + (h.web_search_configured ? "ready" : "not configured"));
+  } catch (e) {
+    s.innerHTML = '<span class="dot bad"></span>';
+    s.append("server unreachable");
+  }
+})();
+</script>
+</body>
+</html>
