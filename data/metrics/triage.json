@@ -1,0 +1,403 @@
+{
+  "task": "triage: is the claim checkable (fact) or not checkable (opinion or prediction)?",
+  "model": "claude-sonnet-5.5-eu",
+  "run_at": "2026-11-14T20:48:49Z",
+  "n_items": 30,
+  "n_failed_calls": 0,
+  "accuracy": {
+    "successes": 28,
+    "n": 30,
+    "value": 0.9333333333333333,
+    "ci95": [
+      0.7868,
+      0.9815
+    ],
+    "too_small": false
+  },
+  "abstains_on_uncheckable": {
+    "successes": 7,
+    "n": 7,
+    "value": 1.0,
+    "ci95": [
+      0.6457,
+      1.0
+    ],
+    "too_small": true
+  },
+  "accepts_checkable": {
+    "successes": 21,
+    "n": 23,
+    "value": 0.9130434782608695,
+    "ci95": [
+      0.732,
+      0.9758
+    ],
+    "too_small": false
+  },
+  "kind_agreement": {
+    "successes": 21,
+    "n": 23,
+    "value": 0.9130434782608695,
+    "ci95": [
+      0.732,
+      0.9758
+    ],
+    "too_small": false
+  },
+  "errors": [
+    {
+      "id": "t22",
+      "claim": "My neighbour's dog learned to count to ten last week.",
+      "kind": "news",
+      "expected": "not_enough_data",
+      "got_checkable": false,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": false
+    },
+    {
+      "id": "t23",
+      "claim": "A secret meeting of unnamed officials decided the price of bread last night.",
+      "kind": "news",
+      "expected": "not_enough_data",
+      "got_checkable": false,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": true,
+      "correct": false
+    }
+  ],
+  "rows": [
+    {
+      "id": "t01",
+      "claim": "Smoking tobacco increases the risk of lung cancer.",
+      "kind": "scientific",
+      "expected": "supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t02",
+      "claim": "The MMR vaccine causes autism.",
+      "kind": "scientific",
+      "expected": "not_supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t03",
+      "claim": "Regular physical exercise reduces symptoms of depression.",
+      "kind": "scientific",
+      "expected": "supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t04",
+      "claim": "Antibiotics are effective against viral infections such as the common cold.",
+      "kind": "scientific",
+      "expected": "not_supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t05",
+      "claim": "Human activity is the main cause of global warming since the mid-20th century.",
+      "kind": "scientific",
+      "expected": "supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t06",
+      "claim": "Vitamin C supplements prevent the common cold in the general population.",
+      "kind": "scientific",
+      "expected": "not_supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t07",
+      "claim": "Humans use only 10 percent of their brains.",
+      "kind": "scientific",
+      "expected": "not_supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t08",
+      "claim": "Drinking coffee is associated with a lower risk of type 2 diabetes.",
+      "kind": "scientific",
+      "expected": "supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t09",
+      "claim": "Homeopathic remedies work better than placebo.",
+      "kind": "scientific",
+      "expected": "not_supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t10",
+      "claim": "Sugar makes children hyperactive.",
+      "kind": "scientific",
+      "expected": "not_supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t11",
+      "claim": "Wearing a seat belt reduces the risk of death in a car crash.",
+      "kind": "scientific",
+      "expected": "supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t12",
+      "claim": "Moderate alcohol consumption is good for heart health.",
+      "kind": "scientific",
+      "expected": "mixed",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t13",
+      "claim": "Intermittent fasting leads to more weight loss than ordinary calorie restriction.",
+      "kind": "scientific",
+      "expected": "mixed",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t14",
+      "claim": "Screen time causes depression in teenagers.",
+      "kind": "scientific",
+      "expected": "mixed",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t15",
+      "claim": "Fluoride in drinking water reduces tooth decay.",
+      "kind": "scientific",
+      "expected": "supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t16",
+      "claim": "5G mobile networks spread COVID-19.",
+      "kind": "scientific",
+      "expected": "not_supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t17",
+      "claim": "Sleep deprivation impairs attention and memory.",
+      "kind": "scientific",
+      "expected": "supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t18",
+      "claim": "The Great Wall of China is visible to the naked eye from the Moon.",
+      "kind": "news",
+      "expected": "not_supported",
+      "got_checkable": true,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t19",
+      "claim": "Finland joined NATO in April 2023.",
+      "kind": "news",
+      "expected": "supported",
+      "got_checkable": true,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t20",
+      "claim": "The United Kingdom left the European Union in January 2020.",
+      "kind": "news",
+      "expected": "supported",
+      "got_checkable": true,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t21",
+      "claim": "The 2020 United States presidential election was decided by widespread voter fraud.",
+      "kind": "news",
+      "expected": "not_supported",
+      "got_checkable": true,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": true,
+      "correct": true
+    },
+    {
+      "id": "t22",
+      "claim": "My neighbour's dog learned to count to ten last week.",
+      "kind": "news",
+      "expected": "not_enough_data",
+      "got_checkable": false,
+      "got_kind": "scientific",
+      "error": null,
+      "want_checkable": true,
+      "correct": false
+    },
+    {
+      "id": "t23",
+      "claim": "A secret meeting of unnamed officials decided the price of bread last night.",
+      "kind": "news",
+      "expected": "not_enough_data",
+      "got_checkable": false,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": true,
+      "correct": false
+    },
+    {
+      "id": "t24",
+      "claim": "Pineapple on pizza is disgusting.",
+      "kind": "news",
+      "expected": "not_checkable",
+      "got_checkable": false,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": false,
+      "correct": true
+    },
+    {
+      "id": "t25",
+      "claim": "By 2040 nobody will drive their own car.",
+      "kind": "news",
+      "expected": "not_checkable",
+      "got_checkable": false,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": false,
+      "correct": true
+    },
+    {
+      "id": "t26",
+      "claim": "This is the best phone ever made.",
+      "kind": "news",
+      "expected": "not_checkable",
+      "got_checkable": false,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": false,
+      "correct": true
+    },
+    {
+      "id": "t27",
+      "claim": "Politicians should be ashamed of themselves.",
+      "kind": "news",
+      "expected": "not_checkable",
+      "got_checkable": false,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": false,
+      "correct": true
+    },
+    {
+      "id": "t28",
+      "claim": "Bitcoin will reach one million dollars next year.",
+      "kind": "news",
+      "expected": "not_checkable",
+      "got_checkable": false,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": false,
+      "correct": true
+    },
+    {
+      "id": "t29",
+      "claim": "Classical music is more beautiful than pop music.",
+      "kind": "news",
+      "expected": "not_checkable",
+      "got_checkable": false,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": false,
+      "correct": true
+    },
+    {
+      "id": "t30",
+      "claim": "Things were simply better in the old days.",
+      "kind": "news",
+      "expected": "not_checkable",
+      "got_checkable": false,
+      "got_kind": "news",
+      "error": null,
+      "want_checkable": false,
+      "correct": true
+    }
+  ]
+}

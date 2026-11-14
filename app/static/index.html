@@ -199,9 +199,10 @@ function renderClaims(part) {
     b.appendChild(el("p", null, c.text));
     if (c.quote) b.appendChild(el("blockquote", null, "“" + c.quote + "”"));
     else b.appendChild(el("p", "note", "The exact wording could not be matched in the transcript, so no quote is shown."));
-    if (c.checkable) b.appendChild(el("span", "chip wait", "Checkable · evidence pending"));
-    else b.appendChild(el("span", "chip abstain", "Not checkable · " + c.why_not_checkable));
-    b.appendChild(el("span", "chip kind", c.kind === "scientific" ? "research sources" : "news sources"));
+    if (c.checkable) {
+      b.appendChild(el("span", "chip wait", "Checkable · evidence pending"));
+      b.appendChild(el("span", "chip kind", c.kind === "scientific" ? "research sources" : "news sources"));
+    } else b.appendChild(el("span", "chip abstain", "Not checkable · " + c.why_not_checkable));
     row.appendChild(b);
     s.appendChild(row);
   });
