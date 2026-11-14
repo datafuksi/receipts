@@ -456,6 +456,8 @@ if (EMBED) {
       const p = pendingVideo; pendingVideo = null;
       if (m.transcript && m.transcript.length >= 40) analyzeTranscript(m.transcript, p.title);
       else noTranscript(p.message, p.title);
+    } else if (m.type === "receipts:prewarm" && Array.isArray(m.urls) && m.urls.length) {
+      post("/prewarm", { urls: m.urls.slice(0, 3) });   // background only; nothing is shown for these yet
     } else if (m.type === "receipts:idle") {
       run++; out.replaceChildren();
       slip("Waiting for a video").appendChild(el("p", null, m.message || "Open a YouTube video or Short and it will be checked here."));

@@ -5,6 +5,9 @@ const frame = document.getElementById("app");
 const auto = document.getElementById("auto");
 const checkBtn = document.getElementById("check");
 const msg = document.getElementById("msg");
+const pre = document.getElementById("pre");
+const ahead = document.getElementById("ahead");
+const prechecked = new Set();   // Shorts already sent for pre-checking in this panel session
 
 let ready = false;      // the results page has loaded and is listening
 let shownId = null;     // video currently shown in the results page
@@ -53,9 +56,19 @@ async function askCurrent() {
 
 // Messages from the YouTube tab.
 chrome.runtime.onMessage.addListener((m, sender) => {
-  if (!m || m.type !== "receipts:video" || !sender.tab || !sender.tab.active) return;
-  activeTabId = sender.tab.id;
-  onVideo(m.video);
+  if (!m || !sender.tab || !sender.tab.active) return;
+  if (m.type === "receipts:video") {
+    activeTabId = sender.tab.id;
+    ahead.textContent = "";
+    onVideo(m.video);
+  } else if (m.type === "receipts:upcoming") {
+    if (!ready || !auto.checked || !pre.checked) return;
+    const urls = (m.urls || []).filter((u) => !prechecked.has(u)).slice(0, 3);
+    if (!m.urls || !m.urls.length) { ahead.textContent = "Could not see the upcoming Shorts on this page."; return; }
+    urls.forEach((u) => prechecked.add(u));
+    if (urls.length) toPage({ type: "receipts:prewarm", urls });
+    ahead.textContent = "Pre-checking the next " + m.urls.length + " Short" + (m.urls.length === 1 ? "" : "s") + ".";
+  }
 });
 chrome.tabs.onActivated.addListener(() => askCurrent());
 
@@ -89,8 +102,11 @@ auto.onchange = () => {
   if (auto.checked && waiting) show(waiting);
 };
 
-chrome.storage.local.get({ auto: true }, (s) => {
+pre.onchange = () => chrome.storage.local.set({ pre: pre.checked });
+
+chrome.storage.local.get({ auto: true, pre: true }, (s) => {
   auto.checked = s.auto;
+  pre.checked = s.pre;
   msg.textContent = "Connecting to the Receipts server…";
   msg.hidden = false;
   frame.src = SERVER + "/?embed=1";

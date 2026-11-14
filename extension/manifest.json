@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Receipts — evidence and rhetoric check for videos",
   "short_name": "Receipts",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Checks the claims in the YouTube video or Short you are watching against research and news sources, and flags persuasion techniques.",
   "permissions": ["sidePanel", "storage"],
   "host_permissions": ["https://www.youtube.com/*"],

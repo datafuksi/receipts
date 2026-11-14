@@ -44,6 +44,10 @@ class TranscriptUrlIn(BaseModel):
     url: str = Field(min_length=11, max_length=300)
 
 
+class PrewarmIn(BaseModel):
+    urls: list[str] = Field(min_length=1, max_length=3)
+
+
 class SummaryOut(BaseModel):
     """What the model must return for a summary."""
 

@@ -21,7 +21,9 @@
 <body>
   <div class="bar">
     <label><input type="checkbox" id="auto"> Auto-check as I scroll</label>
+    <label><input type="checkbox" id="pre"> Pre-check next 3 Shorts</label>
     <button id="check" hidden>Check this video</button>
+    <span id="ahead" style="flex-basis:100%;opacity:.75"></span>
   </div>
   <div id="msg" hidden></div>
   <iframe id="app" title="Receipts results" referrerpolicy="no-referrer"></iframe>

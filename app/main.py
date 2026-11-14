@@ -10,16 +10,17 @@ from fastapi.staticfiles import StaticFiles
 
 from .analysis import TranscriptIndex, Triage, detect_manipulation, extract_claims
 from .config import get_settings
-from .evidence import EvidenceError, check_claim
+from .evidence import EvidenceError
 from .limits import limiter
+from .prewarm import cached_analysis, cached_transcript, prewarm, shared_check
 from .llm import HTTP_STATUS, LLMError, chat_json
-from .schemas import AnalyzeIn, CheckIn, ClaimsIn, SummarizeIn, SummaryOut, TranscriptUrlIn
-from .transcripts import TranscriptError, fetch_transcript
+from .schemas import AnalyzeIn, CheckIn, ClaimsIn, PrewarmIn, SummarizeIn, SummaryOut, TranscriptUrlIn
+from .transcripts import TranscriptError
 
 load_dotenv()
 
 STATIC = Path(__file__).parent / "static"
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 app = FastAPI(title="Receipts", version=VERSION, docs_url="/docs", redoc_url=None)
 
@@ -124,29 +125,37 @@ async def check(body: CheckIn):
     triage = None
     if body.kind and body.search_queries:
         triage = Triage(checkable=True, kind=body.kind, search_queries=body.search_queries, key_terms=body.key_terms)
-    return await check_claim(body.claim, triage=triage, use_cache=not body.fresh)
+    return await shared_check(body.claim, triage, use_cache=not body.fresh)
 
 
 @app.post("/transcript")
 async def transcript(body: TranscriptUrlIn):
-    return {"status": "ok", **(await fetch_transcript(body.url))}
+    return {"status": "ok", **(await cached_transcript(body.url))}
+
+
+async def _analyze(transcript: str, length: str) -> dict:
+    async def run() -> dict:
+        index = TranscriptIndex(transcript)
+        summary, claims_part, manipulation_part = await asyncio.gather(
+            _part(_summary(transcript, length)),
+            _part(extract_claims(transcript, index)),
+            _part(detect_manipulation(transcript, index)),
+        )
+        # Evidence is checked per claim through /check, so results can appear as they arrive.
+        return {"status": "ok", "summary": summary, "claims": claims_part, "manipulation": manipulation_part}
+
+    return await cached_analysis(transcript, length, run)
 
 
 @app.post("/analyze")
 async def analyze(body: AnalyzeIn):
-    index = TranscriptIndex(body.transcript)
-    summary, claims_part, manipulation_part = await asyncio.gather(
-        _part(_summary(body.transcript, body.summary_length)),
-        _part(extract_claims(body.transcript, index)),
-        _part(detect_manipulation(body.transcript, index)),
-    )
-    return {
-        "status": "ok",
-        "summary": summary,
-        "claims": claims_part,
-        "manipulation": manipulation_part,
-        # Evidence is checked per claim through /check, so results can appear as they arrive.
-    }
+    return await _analyze(body.transcript, body.summary_length)
+
+
+@app.post("/prewarm")
+async def prewarm_videos(body: PrewarmIn):
+    """Start checking upcoming videos in the background so their results are ready on arrival."""
+    return prewarm(body.urls, _analyze)
 
 
 @app.get("/", include_in_schema=False)

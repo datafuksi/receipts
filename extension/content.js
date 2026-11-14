@@ -24,12 +24,45 @@ function send(message) {
   }
 }
 
+// Shorts the page has already lined up after the one on screen. YouTube renders the next few
+// reels ahead of time; we read their video ids from links and thumbnails already in the page.
+// Best effort: if YouTube changes its markup this returns an empty list and nothing is pre-checked.
+function upcomingShorts(currentId, max) {
+  const reels = Array.from(document.querySelectorAll("ytd-reel-video-renderer, .reel-video-in-sequence, .reel-video-in-sequence-new"));
+  const idOf = (node) => {
+    const html = node.innerHTML;
+    const m = html.match(/\/shorts\/([A-Za-z0-9_-]{11})/) || html.match(/\/vi(?:_webp)?\/([A-Za-z0-9_-]{11})\//);
+    return m ? m[1] : null;
+  };
+  let at = reels.findIndex((r) => r.hasAttribute("is-active"));
+  if (at < 0) at = reels.findIndex((r) => idOf(r) === currentId);
+  if (at < 0) return [];
+  const ids = [];
+  for (const reel of reels.slice(at + 1)) {
+    const id = idOf(reel);
+    if (id && id !== currentId && !ids.includes(id)) ids.push(id);
+    if (ids.length >= max) break;
+  }
+  return ids;
+}
+
 let lastId = undefined;
 let timer = null;
+let aheadTimer = null;
+
+function announceAhead(forId) {
+  const v = currentVideo();
+  if (!v || v.id !== forId || v.kind !== "short") return;
+  const ids = upcomingShorts(v.id, 3);
+  send({ type: "receipts:upcoming", forId: v.id, urls: ids.map((id) => "https://www.youtube.com/shorts/" + id) });
+}
 
 function announce() {
   const v = currentVideo();
   send(v ? { type: "receipts:video", video: v } : { type: "receipts:video", video: null });
+  clearTimeout(aheadTimer);
+  // Give YouTube a moment to line up the next reels before looking for them.
+  if (v && v.kind === "short") aheadTimer = setTimeout(() => announceAhead(v.id), 1500);
 }
 
 // YouTube is a single-page app: the address changes without a page load, including when
@@ -67,6 +100,10 @@ function transcriptFromPage() {
 
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   if (!msg) return;
-  if (msg.type === "receipts:get-current") reply({ video: currentVideo() });
+  if (msg.type === "receipts:get-current") {
+    const v = currentVideo();
+    reply({ video: v });
+    if (v && v.kind === "short") setTimeout(() => announceAhead(v.id), 1500);
+  }
   else if (msg.type === "receipts:get-transcript") reply({ transcript: transcriptFromPage() });
 });
