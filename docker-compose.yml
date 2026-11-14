@@ -1,13 +1,26 @@
+# The VPS already runs Traefik on ports 80/443 (docker provider, HTTP -> HTTPS redirect,
+# Let's Encrypt resolver "letsencrypt"). We publish no host port; Traefik routes to us by label.
 services:
   api:
     build: .
     container_name: receipts-api
     env_file: .env
-    ports:
-      - "${HOST_PORT:-80}:8000"
     volumes:
       - receipts-cache:/srv/cache
     restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.receipts.loadbalancer.server.port=8000
+      # Public hostname with a real certificate
+      - traefik.http.routers.receipts.rule=Host(`${PUBLIC_HOST}`)
+      - traefik.http.routers.receipts.entrypoints=websecure
+      - traefik.http.routers.receipts.tls.certresolver=letsencrypt
+      - traefik.http.routers.receipts.service=receipts
+      # Bare IP fallback (Traefik's default self-signed certificate; browsers warn)
+      - traefik.http.routers.receipts-ip.rule=Host(`${PUBLIC_IP}`)
+      - traefik.http.routers.receipts-ip.entrypoints=websecure
+      - traefik.http.routers.receipts-ip.tls=true
+      - traefik.http.routers.receipts-ip.service=receipts
 
 volumes:
   receipts-cache:
